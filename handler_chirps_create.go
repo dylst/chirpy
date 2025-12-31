@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dylst/chirpy/internal/auth"
 	"github.com/dylst/chirpy/internal/database"
 	"github.com/google/uuid"
 )
@@ -19,24 +20,28 @@ type Chirp struct{
 }
 
 func (cfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, r *http.Request) {
-	/* 
-	define the params 
-	init the struct 
-	define the decoder 
-	decode the body into params
-
-	validate the body
-	*/
 	type parameters struct{
 		Body string `json:"body"`
-		UserID uuid.UUID `json:"user_id"`
+	}
+
+	token, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Could not retrieve token", err)
+		return
+	}
+
+	userID, err := auth.ValidateJWT(token, cfg.secret)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Invalid JWT token", err)
+		return
 	}
 
 	params := parameters{}
 	decoder := json.NewDecoder(r.Body)
-	err := decoder.Decode(&params)
+	err = decoder.Decode(&params)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Could not decode params", err)
+		return
 	}
 
 	const maxChirpLength = 140 
@@ -54,7 +59,7 @@ func (cfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, r *http.Request)
 
 	chirp, err := cfg.db.CreateChirp(r.Context(), database.CreateChirpParams{
 		Body: cleanedBodyResponse,
-		UserID: params.UserID,
+		UserID: userID,
 	})
 
 	respondWithJson(w, http.StatusCreated, Chirp{
