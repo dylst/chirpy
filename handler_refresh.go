@@ -21,23 +21,13 @@ func (cfg *apiConfig) handlerRefresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := cfg.db.GetUserFromRefreshToken(r.Context(), bearerToken)
+	user, err := cfg.db.GetUserFromRefreshToken(r.Context(), bearerToken)
 	if err != nil {
 		respondWithError(w, http.StatusUnauthorized, "Failed to get user from token", err)
 		return
 	}
 
-	if time.Now().After(token.ExpiresAt) {
-		respondWithError(w, http.StatusUnauthorized, "Expired token", err)
-		return
-	}
-
-	if token.RevokedAt.Valid {
-		respondWithError(w, http.StatusUnauthorized, "Token revoked", nil)
-    	return
-	}
-
-	access_token, err := auth.MakeJWT(token.UserID, cfg.secret, time.Hour)
+	access_token, err := auth.MakeJWT(user.ID, cfg.secret, time.Hour)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failed to create JWT token", err)
 		return

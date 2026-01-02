@@ -21,13 +21,13 @@ func (cfg *apiConfig) handlerCreateUser(w http.ResponseWriter, r *http.Request) 
 		respondWithError(w, http.StatusInternalServerError, "Could not decode parameters", err)
 	}
 
-	hashed_password, err := auth.HashPassword(params.Password)
+	hashedPassword, err := auth.HashPassword(params.Password)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Could not hash password", err)
 	}
 	user, err := cfg.db.CreateUser(r.Context(), database.CreateUserParams{
 		Email: params.Email,
-		HashedPassword: hashed_password,
+		HashedPassword: hashedPassword,
 	})
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failed to create user", err)
