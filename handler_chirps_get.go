@@ -3,13 +3,33 @@ package main
 import (
 	"net/http"
 
+	"github.com/dylst/chirpy/internal/database"
 	"github.com/google/uuid"
 )
 
 func (cfg *apiConfig) handlerGetChirps(w http.ResponseWriter, r *http.Request) {
-	dbChirps, err := cfg.db.GetChirps(r.Context())
-	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Failed to fetch chirps", err)
+	authorIdString := r.URL.Query().Get("author_id")
+
+	var dbChirps []database.Chirp
+	var err error
+
+	if authorIdString == "" {
+		dbChirps, err = cfg.db.GetChirps(r.Context())
+		if err != nil {
+			respondWithError(w, http.StatusInternalServerError, "Failed to fetch chirps", err)
+			return
+		}
+	} else {
+		authorId, err := uuid.Parse(authorIdString)
+		if err != nil {
+			respondWithError(w, http.StatusInternalServerError, "Failed to parse author id", err)
+			return
+		}
+		dbChirps, err = cfg.db.GetChirpsByAuthor(r.Context(), authorId)
+		if err != nil {
+			respondWithError(w, http.StatusInternalServerError, "Failed to fetch chirps", err)
+			return
+		}
 	}
 
 	chirps := []Chirp{}
